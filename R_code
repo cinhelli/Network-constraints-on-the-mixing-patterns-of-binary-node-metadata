@@ -1,0 +1,297 @@
+#NEW VERSION:
+#Bounds to assortativity
+#
+#Go to last lines for a working example
+#
+#Bounds valid in the Metadata Graph Space:
+#the required inputs are a graph (connected,undirected and unweighted) and
+#a binary vector of size equal to the number of nodes of the graph.
+
+r_binary_min_max_MGS <- function(g,binaryvector){ 
+  #m00 <- M - m11 - m10
+  n1 <- sum(binaryvector)
+  N <- vcount(g)
+  M <- ecount(g)
+  deg_seq <- sort(degree(g),decreasing = T)
+  m11.min.new.new <- function(n1,N,deg_seq){
+    n0 <- N - n1
+    if(n1!=N){
+      firstpart <- deg_seq[N:(N-n1+1)]
+      secondpart <- deg_seq[1:(N-n1)]
+      secondpart[secondpart>n1] <- n1
+      max(0,floor((sum(firstpart)-sum(secondpart))/2))# +1 is for vectorization
+    }else(sum(deg_seq)/2)
+  }
+  
+  m00.min.new.new <- function(n1,N,deg_seq){
+    n0 <- N - n1
+    if(n0!=N){
+      firstpart <- deg_seq[N:(N-n0+1)]
+      secondpart <- deg_seq[1:(N-n0)]
+      secondpart[secondpart>n0] <- n0
+      max(0,floor((sum(firstpart)-sum(secondpart))/2))#il +1 ? per la vettorizzazione
+    }else(sum(deg_seq)/2)
+  }
+  
+  m10.min.new.new <- function(n1,N,deg_seq){
+    t_f <- 0
+    n0 <- N - n1
+    if(n1 != 0 & n1 != N ){
+      t1 <- 1
+      t2 <- sum(deg_seq[N:(N-n1+1)])-n1*(n1-1)
+      t3 <- sum(deg_seq[N:(N-n0+1)])-n0*(n0-1)
+      if(n1 > n0){
+        tmp_t4 <- deg_seq[1:n1]-(n1-1)
+        tmp_t4[tmp_t4<0] <- 0
+        t4 <- sum(tmp_t4)/2
+        t_f <- max(t1,t2,t3,t4)
+      }
+      if(n1 <= n0){
+        tmp_t4 <- deg_seq[1:n0]-(n0-1)
+        tmp_t4[tmp_t4<0] <- 0
+        t4 <- sum(tmp_t4)/2
+        t_f <- max(t1,t2,t3,t4)
+      }
+    }
+    return(t_f)
+  }
+  
+  m11.max.new <- function(n1,M,deg_seq){ #deg_seq sorted from high to low
+    ds1 <- deg_seq[1:n1]
+    ds1[ds1 > (n1-1)] <- n1-1 
+    min(M,choose(n1,2),ceiling(sum(ds1)/2))
+  }
+  
+  m00.max.new <- function(n1,N,M,deg_seq){ #
+    n0 <- N - n1
+    ds0 <- deg_seq[1:n0]
+    ds0[ds0 > (n0-1)] <- n0-1 
+    min(M,choose(n0,2),ceiling(sum(ds0)/2))
+  }
+  m10.max.new <- function(n1,N,M,deg_seq){
+    ds1 <- deg_seq[1:n1]
+    ds1[ds1 > (N - n1)] <- N - n1
+    ds0 <- deg_seq[1:(N - n1)]
+    ds0[ds0 > n1] <- n1
+    min(M,n1*(N-n1),min(sum(ds1),sum(ds0)))
+  }
+  # 
+  # t_1 <- m11/M
+  # t_2 <- m10 / (2*M)
+  # t_3 <- m00 / M
+  
+  LBm11 <- m11.min.new.new(n1, N,  deg_seq)
+  LBm00 <- m00.min.new.new(n1, N,  deg_seq)
+  t_1_min <- LBm11 / M #m11
+  t_3_min <- LBm00  / M #m00
+  t_2_min <- (M - LBm11 - LBm00)  / (2*M) #m10
+  
+  r_min_1 <- (t_1_min + t_3_min - (t_3_min + t_2_min)^2 - (t_1_min + t_2_min)^2) / 
+    (1 - (t_3_min + t_2_min)^2 - (t_1_min + t_2_min)^2)
+  r_min_1 <- round(r_min_1, digits = 3)
+  
+  UBm10 <- m10.max.new(n1,N,M,deg_seq)
+  
+  if(UBm10+LBm11<=M){#DeltaMin
+    tmp1 <- (M-UBm10)*M
+    tmp2 <- (M-LBm11-(UBm10/2))^2
+    tmp3 <-  (LBm11+(UBm10/2))^2
+    r_DeltaMin <- (tmp1 - tmp2 - tmp3)/(M^2 - tmp2 - tmp3)
+  }else(r_DeltaMin <- -1)
+  
+  if(UBm10+LBm00<=M){#DeltaMax
+    tmp1 <- (M-UBm10)*M
+    tmp2 <- (LBm00+(UBm10/2))^2 
+    tmp3 <- (M-LBm00-(UBm10/2))^2
+    r_DeltaMax <- (tmp1 - tmp2 - tmp3)/(M^2 - tmp2 - tmp3)
+  }else(r_DeltaMax <- -1)
+  
+  #il 30/01/2019 ho cambiato max in min (dopo round)
+  r_min <- round(min(r_min_1, r_DeltaMin, r_DeltaMax), digits = 3)
+  #r_min_Newman <- ((0 - (t_3 + t_2)^2 - (t_1 + t_2)^2)) / (1 - (t_3 + t_2)^2 - (t_1 + t_2)^2)
+  
+  LBm10 <- m10.min.new.new(n1,N,deg_seq)
+  
+  m00_max <- m00.max.new(n1,N,M,deg_seq)
+  m11_max <- m11.max.new(n1,M,deg_seq)
+  
+  t_2_max <-  LBm10 / (2*M)
+  t_13_max <- (M - LBm10) / M
+  
+  t_1_max <- (M - LBm10)/(2*M)
+  t_3_max <- (M - LBm10)/(2*M)
+  #removed since v.013 of the paper
+  # if(m11_max <= ceiling((M - LBm10)/2)){
+  #   t_1_max <- m11_max / M
+  #   t_3_max <- (((M - LBm10)/2) +((M - LBm10)/2 - m11_max)) / M}
+  # 
+  # if(m00_max <= ceiling((M - LBm10)/2)){
+  #   t_3_max <- m00_max / M
+  #   t_1_max <- (((M - LBm10)/2) +((M - LBm10)/2 - m00_max)) / M}
+  
+  r_max <- (t_13_max - (t_3_max + t_2_max)^2 - (t_1_max + t_2_max)^2) / 
+    (1 - (t_3_max + t_2_max)^2 - (t_1_max + t_2_max)^2)
+  r_max <- round(r_max, digits = 3)
+  
+  return(list(LBm11 = LBm11, LBm00 = LBm00, LBm10 = LBm10, r_min = r_min, r_max = r_max))
+}
+
+
+
+#Bounds valid in the Graph Space:
+#the required inputs are a graph (connected,undirected and unweighted) and
+#a binary vector of size equal to the number of nodes of the graph.
+
+r_binary_min_max_GS <- function(g, binaryvector){
+  M <- ecount(g)
+  m11.GS.max <- function(g,binaryvector){
+    d <- degree(g)
+    n1 <- sum(binaryvector)
+    theones <- which(binaryvector==1)
+    d1 <- d[theones]
+    d1[d1 > (n1-1)] <- n1-1 
+    min(M,choose(n1,2),ceiling(sum(d1)/2))
+  }
+  m00.GS.max <- function(g,binaryvector){
+    d <- degree(g)
+    n1 <- sum(binaryvector)
+    n0 <- vcount(g)-n1
+    thezeros <- which(binaryvector==0)
+    d0 <- d[thezeros]
+    d0[d0 > (n0-1)] <- n0-1 
+    min(M,choose(n0,2),ceiling(sum(d0)/2))
+  }
+  m10.GS.max <- function(g,binaryvector){
+    d <- degree(g)
+    N <- vcount(g)
+    n1 <- sum(binaryvector)
+    theones <- which(binaryvector==1)
+    thezeros <- which(binaryvector==0)
+    d1 <- d[theones]
+    d1[d1 > (N - n1)] <- N - n1
+    d0 <- d[thezeros]
+    d0[d0 > n1] <- n1
+    min(M,n1*(N-n1),min(sum(d1),sum(d0)))
+  }
+  #
+  m11.GS.min <- function(g, binaryvector){
+    d <- degree(g)
+    N <- vcount(g)
+    n1 <- sum(binaryvector)
+    theones <- which(binaryvector==1)
+    thezeros <- which(binaryvector==0)
+    d1 <- d[theones]
+    d0 <- d[thezeros]
+    if(n1!=N){
+      firstpart <- d[theones]
+      secondpart <- d[thezeros]
+      secondpart[secondpart>n1] <- n1
+      max(0,floor((sum(firstpart)-sum(secondpart))/2))#+1 for vectorization
+    }else(sum(d)/2)
+  }
+  m00.GS.min <- function(g, binaryvector){
+    d <- degree(g)
+    N <- vcount(g)
+    n1 <- sum(binaryvector)
+    n0 <- N - n1
+    theones <- which(binaryvector==1)
+    thezeros <- which(binaryvector==0)
+    d1 <- d[theones]
+    d0 <- d[thezeros]
+    if(n0!=N){
+      firstpart <- d[thezeros]
+      secondpart <- d[theones]
+      secondpart[secondpart>(N-n1)] <- N-n1
+      max(0,floor((sum(firstpart)-sum(secondpart))/2))#
+    }else(sum(d)/2)
+  }
+  m10.GS.min <- function(g, binaryvector){
+    t_f <- 0
+    d <- degree(g)
+    N <- vcount(g)
+    n1 <- sum(binaryvector)
+    n0 <- N - n1
+    theones <- which(binaryvector==1)
+    thezeros <- which(binaryvector==0)
+    d1 <- d[theones]
+    d0 <- d[thezeros]
+    if(n1 != 0 & n1 != N ){
+      t1 <- 1
+      t2 <- d1 - (n1-1)
+      t2[t2<0] <- 0
+      t2 <- sum(t2)
+      t3 <- d0 - (n0-1);t3[t3<0]<-0
+      t3 <- sum(t3)
+      t_f <- max(t1,t2,t3)
+    }
+    return(t_f)
+  }
+  
+  LBm11 <- m11.GS.min(g, binaryvector)
+  LBm00 <- m00.GS.min(g, binaryvector)
+  t_1_min <- LBm11 / M #m11
+  t_3_min <- LBm00  / M #m00
+  t_2_min <- (M - LBm11 - LBm00)  / (2*M) #m10
+  
+  r_min_1 <- (t_1_min + t_3_min - (t_3_min + t_2_min)^2 - (t_1_min + t_2_min)^2) / 
+    (1 - (t_3_min + t_2_min)^2 - (t_1_min + t_2_min)^2)
+  r_min_1 <- round(r_min_1, digits = 3)
+  
+  UBm10 <- m10.GS.max(g, binaryvector)
+  
+  if(UBm10+LBm11<=M){#DeltaMin
+    tmp1 <- (M-UBm10)*M
+    tmp2 <- (M-LBm11-(UBm10/2))^2
+    tmp3 <-  (LBm11+(UBm10/2))^2
+    r_DeltaMin <- (tmp1 - tmp2 - tmp3)/(M^2 - tmp2 - tmp3)
+  }else(r_DeltaMin <- -1)
+  
+  if(UBm10+LBm00<=M){#DeltaMax
+    tmp1 <- (M-UBm10)*M
+    tmp2 <- (LBm00+(UBm10/2))^2 
+    tmp3 <- (M-LBm00-(UBm10/2))^2
+    r_DeltaMax <- (tmp1 - tmp2 - tmp3)/(M^2 - tmp2 - tmp3)
+  }else(r_DeltaMax <- -1)
+  
+  r_min <- round(min(r_min_1, r_DeltaMin, r_DeltaMax), digits = 3)
+  
+  #r_min_Newman <- ((0 - (t_3 + t_2)^2 - (t_1 + t_2)^2)) / (1 - (t_3 + t_2)^2 - (t_1 + t_2)^2)
+  
+  LBm10 <- m10.GS.min(g,binaryvector)
+  m11_max <- m11.GS.max(g,binaryvector)
+  m00_max <- m00.GS.max(g,binaryvector)
+  
+  t_2_max <-  LBm10 / (2*M)
+  t_13_max <- (M - LBm10) / M
+  
+  t_1_max <- (M - LBm10)/(2*M)
+  t_3_max <- (M - LBm10)/(2*M)
+  
+  if(m11_max <= ceiling((M - LBm10)/2)){
+    t_1_max <- m11_max / M
+    t_3_max <- (((M - LBm10)/2) +((M - LBm10)/2 - m11_max)) / M}
+  
+  if(m00_max <= ceiling((M - LBm10)/2)){
+    t_3_max <- m00_max / M
+    t_1_max <- (((M - LBm10)/2) +((M - LBm10)/2 - m00_max)) / M}
+  
+  r_max <- (t_13_max - (t_3_max + t_2_max)^2 - (t_1_max + t_2_max)^2) / 
+    (1 - (t_3_max + t_2_max)^2 - (t_1_max + t_2_max)^2)
+  r_max <- round(r_max, digits = 3)
+  
+  return(list(LBm11 = LBm11, LBm00 = LBm00, LBm10 = LBm10, r_min = r_min, r_max = r_max))
+}
+
+
+##########################################################################
+#Working example: the graph has to be connected, undirected and unweighted
+##########################################################################
+library(igraph)
+
+g <- erdos.renyi.game(150,0.2, directed = F); 
+is.connected(g)#if not retry
+binaryvector <- rep(0,150); binaryvector[sample(150,25)] <- 1
+
+r_binary_min_max_GS(g,binaryvector)
+
+r_binary_min_max_MGS(g,binaryvector)
