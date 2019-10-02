@@ -97,14 +97,14 @@ r_binary_min_max_MGS <- function(g,binaryvector){
     tmp2 <- (M-LBm11-(UBm10/2))^2
     tmp3 <-  (LBm11+(UBm10/2))^2
     r_DeltaMin <- (tmp1 - tmp2 - tmp3)/(M^2 - tmp2 - tmp3)
-  }else(r_DeltaMin <- -1)
+  }else(r_DeltaMin <- r_min_1)#since this bound is valid also in the else case
   
   if(UBm10+LBm00<=M){#DeltaMax
     tmp1 <- (M-UBm10)*M
     tmp2 <- (LBm00+(UBm10/2))^2 
     tmp3 <- (M-LBm00-(UBm10/2))^2
     r_DeltaMax <- (tmp1 - tmp2 - tmp3)/(M^2 - tmp2 - tmp3)
-  }else(r_DeltaMax <- -1)
+  }else(r_DeltaMax <- r_min_1)#since this bound is valid also in the else case
   
   #il 30/01/2019 ho cambiato max in min (dopo round)
   r_min <- round(min(r_min_1, r_DeltaMin, r_DeltaMax), digits = 3)
