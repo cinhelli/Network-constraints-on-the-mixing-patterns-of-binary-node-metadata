@@ -99,7 +99,7 @@ r_binary_min_max_MGS_v014 <- function(g,binaryvector){
   #DeltaMax -> equation 17
   if(UBm10+LBm00<=M){
     num_eq17 <- 2*UBm10*M
-    den_eq17 <- M^2 - (UBm10 +2*LBm00-m)^2
+    den_eq17 <- M^2 - (UBm10 +2*LBm00-M)^2
     #r_DeltaMax
     r_eq17 <- 1- (num_eq17/den_eq17)
   }else(r_eq17 <- r_eq15)#since this bound is valid also in the else case
@@ -227,7 +227,7 @@ r_binary_min_max_GS_v014 <- function(g, binaryvector){
   #DeltaMax -> equation 17
   if(UBm10+LBm00<=M){
     num_eq17 <- 2*UBm10*M
-    den_eq17 <- M^2 - (UBm10 +2*LBm00-m)^2
+    den_eq17 <- M^2 - (UBm10 +2*LBm00-M)^2
     #r_DeltaMax
     r_eq17 <- 1- (num_eq17/den_eq17)
   }else(r_eq17 <- r_eq15)#since this bound is valid also in the else case
